@@ -1,0 +1,25 @@
+# OPCIONAL — só para máquinas cuja rede faz inspeção TLS (antivírus como o Avast, proxy corporativo),
+# onde os builds falham com erro de certificado no `dotnet restore` / `npm ci`.
+#
+# Passa um certificado raiz extra aos builds como BuildKit secret. Ele é usado apenas no
+# restore/npm ci e NÃO fica nas imagens finais nem no repositório.
+#
+# Uso (Git Bash):
+#   EXTRA_CA_CERT="C:\ProgramData\Avast Software\Avast\wscert.pem" \
+#     docker compose -f docker-compose.yml -f docker-compose.ca.yml up --build
+#
+# Sem inspeção TLS (CI, maioria das máquinas): use só `docker compose up --build`.
+
+services:
+  api:
+    build:
+      secrets:
+        - extra_ca
+  web:
+    build:
+      secrets:
+        - extra_ca
+
+secrets:
+  extra_ca:
+    file: ${EXTRA_CA_CERT:?Defina EXTRA_CA_CERT com o caminho do certificado raiz (.pem)}

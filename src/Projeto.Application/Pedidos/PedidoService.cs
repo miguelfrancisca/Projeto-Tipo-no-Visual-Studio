@@ -38,7 +38,7 @@ public sealed class PedidoService(
         // Domínio: RN06 (estoque), RN07 (preço congelado), RN09 (total). RN08: data do servidor.
         var pedido = Pedido.Criar(
             cliente,
-            relogio.GetUtcNow().UtcDateTime,
+            AgoraEmMilissegundos(),
             itensRequest.Select(i => new ItemSolicitado(encontrados[i.ProdutoId], i.Quantidade)).ToList());
 
         pedidos.Adicionar(pedido);
@@ -56,5 +56,15 @@ public sealed class PedidoService(
     {
         await listarValidator.ValidateAndThrowAsync(query, cancellationToken); // RN11, RN12
         return await pedidoQueries.ListarAsync(query, cancellationToken);
+    }
+
+    /// <summary>
+    /// A coluna é datetime2(3): truncar aqui garante que a resposta do POST
+    /// mostre exatamente a mesma data que um GET posterior.
+    /// </summary>
+    private DateTime AgoraEmMilissegundos()
+    {
+        var agora = relogio.GetUtcNow().UtcDateTime;
+        return agora.AddTicks(-(agora.Ticks % TimeSpan.TicksPerMillisecond));
     }
 }

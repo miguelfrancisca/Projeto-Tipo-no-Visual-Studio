@@ -10,6 +10,7 @@
 
     <!-- API -->
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.11" />
 
     <!-- Testes -->
     <PackageVersion Include="NSubstitute" Version="5.3.0" />

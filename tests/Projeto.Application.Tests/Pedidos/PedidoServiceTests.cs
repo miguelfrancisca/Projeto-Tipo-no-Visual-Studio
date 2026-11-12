@@ -89,6 +89,21 @@ public class PedidoServiceTests
         Assert.Equal(Agora.UtcDateTime, resposta.DataPedido); // RN08
     }
 
+    [Fact]
+    public async Task CriarAsync_RelogioComSubMilissegundos_TruncaParaPrecisaoDaColuna()
+    {
+        var relogio = new RelogioFixo(new DateTimeOffset(2026, 11, 12, 22, 50, 12, TimeSpan.Zero).AddTicks(1831478));
+        var service = new PedidoService(
+            _clientes, _produtos, _pedidos, _queries, _unitOfWork,
+            new CriarPedidoRequestValidator(), new ListarPedidosQueryValidator(), relogio);
+        ConfigurarCliente(Construtores.Cliente());
+        ConfigurarProdutos(Construtores.Produto(id: 3));
+
+        var resposta = await service.CriarAsync(new CriarPedidoRequest(1, [new(3, 1)]), CancellationToken.None);
+
+        Assert.Equal(new DateTime(2026, 11, 12, 22, 50, 12, 183, DateTimeKind.Utc), resposta.DataPedido);
+    }
+
     // ---------- Regras que dependem de dados (422) ----------
 
     [Fact]

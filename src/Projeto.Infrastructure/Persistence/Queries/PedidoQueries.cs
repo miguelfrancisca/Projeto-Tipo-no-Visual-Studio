@@ -16,13 +16,16 @@ internal sealed class PedidoQueries(AppDbContext context) : IPedidoQueries
             pedidos = pedidos.Where(p => p.ClienteId == clienteId);
         }
 
-        // Intervalo semiaberto, sem função sobre a coluna → index seek (CA11).
-        if (Periodo.Inicio(query.DataInicio) is { } inicio)
+        // Período já convertido para UTC pela Application (RN14). Intervalo semiaberto,
+        // sem função sobre a coluna → index seek (CA11, CA18, CA19).
+        var intervalo = Periodo.ParaUtc(query);
+
+        if (intervalo.Inicio is { } inicio)
         {
             pedidos = pedidos.Where(p => p.DataPedido >= inicio);
         }
 
-        if (Periodo.FimExclusivo(query.DataFim) is { } fimExclusivo)
+        if (intervalo.FimExclusivo is { } fimExclusivo)
         {
             pedidos = pedidos.Where(p => p.DataPedido < fimExclusivo);
         }

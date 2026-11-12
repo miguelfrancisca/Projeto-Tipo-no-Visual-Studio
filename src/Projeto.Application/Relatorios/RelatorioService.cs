@@ -12,9 +12,12 @@ public sealed class RelatorioService(
     {
         await validator.ValidateAndThrowAsync(query, cancellationToken);
 
+        // Validado: o período está completo, numa única forma. Conversão para UTC antes da consulta.
+        var intervalo = Periodo.ParaUtc(query);
+
         return await relatorioQueries.TopClientesAsync(
-            Periodo.Inicio(query.DataInicio)!.Value,
-            Periodo.FimExclusivo(query.DataFim)!.Value,
+            intervalo.Inicio!.Value,
+            intervalo.FimExclusivo!.Value,
             TopClientesQuery.Limite,
             cancellationToken);
     }

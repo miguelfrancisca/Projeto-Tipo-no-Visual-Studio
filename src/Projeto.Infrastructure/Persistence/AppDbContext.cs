@@ -29,6 +29,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     private sealed class UtcDateTimeConverter()
         : ValueConverter<DateTime, DateTime>(
-            v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
+            v => ParaGravacao(v),
             v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+
+    /// <summary>
+    /// Também é aplicado aos PARÂMETROS das consultas. Nunca chama ToUniversalTime(), que usaria o
+    /// fuso da máquina do servidor (RN14): Utc passa direto; Unspecified é tratado como UTC (é o
+    /// que o banco guarda); Local é erro de programação — a conversão deve vir de um DateTimeOffset.
+    /// </summary>
+    private static DateTime ParaGravacao(DateTime valor) => valor.Kind switch
+    {
+        DateTimeKind.Utc => valor,
+        DateTimeKind.Unspecified => DateTime.SpecifyKind(valor, DateTimeKind.Utc),
+        _ => throw new InvalidOperationException(
+            "DateTime com Kind=Local não pode ir para o banco: converta a partir de um DateTimeOffset (UtcDateTime)."),
+    };
 }

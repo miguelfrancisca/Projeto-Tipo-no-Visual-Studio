@@ -93,7 +93,7 @@ Clientes 1 ──── N Pedidos 1 ──── N ItensPedido N ──── 1 
 | PrecoUnitario | DECIMAL(18,2) | NOT NULL, CHECK (PrecoUnitario >= 0) |
 
 Índices:
-- `UX_ItensPedido_PedidoId_ProdutoId (PedidoId, ProdutoId)` UNIQUE — RN05 e busca dos itens de um pedido.
+- `UX_ItensPedido_PedidoId_ProdutoId (PedidoId, ProdutoId) INCLUDE (Quantidade, PrecoUnitario)` UNIQUE — RN05, busca dos itens de um pedido e cobertura da soma por pedido (query da Parte 4).
 - `IX_ItensPedido_ProdutoId (ProdutoId)` — FK (evita scan ao validar deleção de produto).
 
 > **Por que `ValorTotal` desnormalizado em `Pedidos`?** A listagem e o relatório agregam por pedido; com o total gravado, nenhum dos dois precisa ler `ItensPedido`, e os índices acima cobrem as consultas. Como pedidos não são editados (fora de escopo), não há risco de divergência.

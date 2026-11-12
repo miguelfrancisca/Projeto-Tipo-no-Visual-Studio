@@ -27,7 +27,7 @@ A aplicação é composta por:
 | Pedido | Compra feita por um Cliente, composta por 1..N Itens. |
 | Item de pedido | Produto + quantidade + preço unitário congelado no momento da compra. |
 | Valor total do pedido | Σ (Quantidade × PrecoUnitario) de todos os itens. |
-| Período | Intervalo de datas **inclusivo nos dois extremos** (`dataInicio` 00:00 até `dataFim` 23:59:59.9999999). |
+| Período | Intervalo de tempo **semiaberto** `[início, fim)`: o início entra, o fim não. Pode ser informado de duas formas (RN14): **instantes com offset** (`inicio`/`fim`) — usada pelo frontend, no fuso de quem consulta — ou **dias em UTC** (`dataInicio`/`dataFim`, inclusivos: do `dataInicio` 00:00Z até o fim do dia `dataFim` em UTC) — mantida por compatibilidade. |
 
 ## 3. Regras de negócio
 
@@ -43,9 +43,10 @@ A aplicação é composta por:
 | **RN08** | A **data do pedido** é atribuída pelo servidor (UTC) no momento da criação. | Application (`TimeProvider`) |
 | **RN09** | O **valor total** do pedido é calculado e persistido no pedido. | Domain |
 | **RN10** | A criação do pedido + baixa de estoque é **atômica** (tudo ou nada). Duas compras concorrentes do mesmo produto não podem deixar o estoque negativo. | Infrastructure (transação + token de concorrência `rowversion` em `Produtos`) + `CHECK (Estoque >= 0)` |
-| **RN11** | Na listagem, `dataInicio` não pode ser posterior a `dataFim`. | Validação da request |
+| **RN11** | Período coerente: `dataInicio` não pode ser posterior a `dataFim`; `fim` deve ser **posterior** a `inicio` (o fim é exclusivo); não é permitido misturar `dataInicio`/`dataFim` com `inicio`/`fim` na mesma requisição. | Validação da request |
 | **RN12** | Paginação: `pagina ≥ 1`; `tamanhoPagina` entre 1 e 100 (padrão 10). | Validação da request |
 | **RN13** | Relatório top-clientes: período **obrigatório**; retorna no máximo 5 clientes, ordenados por valor total desc (desempate por `ClienteId` asc); clientes sem pedidos no período **não** aparecem. | Infrastructure (query) |
+| **RN14** | O período é interpretado **no fuso de quem consulta**. O cliente envia os limites como instantes ISO 8601 **com offset explícito** (`Z` ou `±hh:mm`); valores sem offset são **rejeitados (400)** — nunca se assume o fuso do servidor. A conversão para UTC é feita na Application, antes da consulta; o banco só recebe UTC. Um dia local = da meia-noite local do primeiro dia até a meia-noite local do dia seguinte ao último (cada limite com o seu próprio offset, o que cobre transições de horário de verão). | Api (binder) + Application (`Periodo`) + frontend (`datas.ts`) |
 
 ## 4. Modelo de dados
 
@@ -141,7 +142,14 @@ Erros: 400 (RN02, RN03, RN05), 422 (RN01, RN04, RN06), 409 (RN10).
 
 ### 5.2 `GET /pedidos` — lista pedidos
 
-Query string (todos opcionais): `clienteId`, `dataInicio` (yyyy-MM-dd), `dataFim` (yyyy-MM-dd), `pagina` (padrão 1), `tamanhoPagina` (padrão 10, máx. 100).
+Query string (todos opcionais): `clienteId`, `pagina` (padrão 1), `tamanhoPagina` (padrão 10, máx. 100) e o período em **uma** das formas (RN14):
+
+| Forma | Parâmetros | Exemplo (dia 10/03/2025 em São Paulo) |
+|---|---|---|
+| Instantes com offset (recomendada; usada pelo frontend) | `inicio` (inclusivo), `fim` (exclusivo) | `inicio=2025-03-10T00:00:00-03:00&fim=2025-03-11T00:00:00-03:00` |
+| Dias em UTC (compatibilidade) | `dataInicio`, `dataFim` (yyyy-MM-dd, inclusivos) | `dataInicio=2025-03-10&dataFim=2025-03-10` → `[10/03 00:00Z, 11/03 00:00Z)` |
+
+Offsets positivos devem ser codificados na URL (`+05:30` → `%2B05:30`); um `+` cru vira espaço e o valor é rejeitado.
 
 Ordenação: `DataPedido DESC, Id DESC`.
 
@@ -162,7 +170,7 @@ Erros: 400 (RN11, RN12).
 
 ### 5.3 `GET /relatorios/top-clientes` — top 5 clientes do período
 
-Query string (**obrigatórios**): `dataInicio`, `dataFim`.
+Query string (**obrigatório**): o período completo, em uma das formas de §5.2 — `inicio` **e** `fim`, ou `dataInicio` **e** `dataFim`.
 
 Resposta `200 OK`:
 ```json
@@ -207,10 +215,15 @@ Entregar em `database/` a versão corrigida e otimizada da query de ranking de c
 - **CA10** — Com `clienteId`, retorna apenas pedidos daquele cliente.
 - **CA11** — Com `dataInicio`/`dataFim`, retorna pedidos cuja data está no intervalo, **incluindo os do dia `dataFim` inteiro**.
 - **CA12** — `dataInicio > dataFim`, `pagina < 1` ou `tamanhoPagina` fora de 1..100 → 400.
+- **CA18** — *Dado* um pedido às 01:30 UTC de 11/03, *quando* filtro com `inicio=2025-03-10T00:00:00-03:00&fim=2025-03-11T00:00:00-03:00` (dia 10 em São Paulo), *então* ele aparece; com `dataInicio=dataFim=2025-03-10` (dia 10 em UTC), não aparece.
+- **CA19** — Um pedido exatamente no instante `inicio` aparece; um pedido exatamente no instante `fim` não aparece.
+- **CA20** — `inicio`/`fim` sem offset (ex.: `2025-03-10T00:00:00`), `fim <= inicio`, ou a mistura de `inicio`/`fim` com `dataInicio`/`dataFim` → 400.
+- **CA21** — No frontend, com o navegador em qualquer fuso, filtrar o dia D exibe exatamente os pedidos cuja data **local** é D, e todas as linhas mostram D.
 
 ### Relatório
 - **CA13** — `GET /relatorios/top-clientes` retorna no máximo 5 clientes, ordenados por valor total desc, considerando apenas pedidos do período.
-- **CA14** — Sem `dataInicio` ou `dataFim` → 400.
+- **CA14** — Sem período completo (falta `dataInicio`/`dataFim`, ou falta `inicio`/`fim`) → 400.
+- **CA22** — `GET /relatorios/top-clientes` com `inicio`/`fim` considera o período no fuso informado (mesmo critério do CA18).
 
 ### Frontend
 - **CA15** — Na tela de listagem consigo filtrar por cliente e período e navegar entre páginas.

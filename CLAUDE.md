@@ -4,7 +4,7 @@ Convenções do projeto para o Claude Code (e para humanos). Leia antes de alter
 
 ## Fonte de verdade
 
-- **Regras de negócio, endpoints, modelo de dados e critérios de aceite:** `docs/spec.md` (RN01–RN13, CA01–CA17). Toda mudança de comportamento começa atualizando a spec.
+- **Regras de negócio, endpoints, modelo de dados e critérios de aceite:** `docs/spec.md` (RN01–RN14, CA01–CA22). Toda mudança de comportamento começa atualizando a spec.
 - **Schema do banco:** `database/*.sql`. **Não existem EF migrations** — o EF Core apenas mapeia as tabelas criadas pelos scripts. Mudou o schema? Altere o script e o mapeamento (`Infrastructure/Persistence/Configurations`) no mesmo commit.
 - **Plano de implementação:** `docs/plan.md`.
 

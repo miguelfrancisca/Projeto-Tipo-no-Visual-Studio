@@ -66,7 +66,17 @@ if ([".cs", ".csproj", ".props"].includes(ext)) {
   const alvo = ext === ".props" ? raiz : csprojMaisProximo(absoluto, raiz);
   if (!alvo) process.exit(0);
   const { codigo, saida } = executar("dotnet", ["build", `"${alvo}"`, "-nologo", "-v", "q"], raiz);
-  if (codigo !== 0) falhar(`dotnet build falhou após editar ${path.relative(raiz, absoluto)}:`, saida, /error [A-Z]+\d+/);
+  if (codigo !== 0) {
+    const erros = saida.split(/\r?\n/).filter((l) => /error [A-Z]+\d+/.test(l));
+    // MSB3021/MSB3027 = DLL bloqueada (ex.: a API rodando com `dotnet run`). Não é erro de código:
+    // avisa sem bloquear, senão o Claude "corrigiria" um problema que não existe.
+    const soArquivoBloqueado = erros.length > 0 && erros.every((l) => /error MSB30(21|27)/.test(l));
+    if (soArquivoBloqueado) {
+      process.stdout.write("Aviso: build não pôde copiar DLLs (processo em execução). Código não verificado.\n");
+      process.exit(0);
+    }
+    falhar(`dotnet build falhou após editar ${path.relative(raiz, absoluto)}:`, saida, /error [A-Z]+\d+/);
+  }
   process.exit(0);
 }
 

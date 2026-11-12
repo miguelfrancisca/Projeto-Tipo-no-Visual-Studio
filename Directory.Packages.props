@@ -5,6 +5,9 @@
     <PackageVersion Include="FluentValidation" Version="11.11.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
 
+    <!-- Infrastructure -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.11" />
+
     <!-- API -->
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
 

@@ -1,6 +1,10 @@
 # Stack completa: `docker compose up --build`
+#   web  http://localhost:3000   (React + nginx)
+#   api  http://localhost:5000   (Swagger em /swagger)
+#   db   localhost,1433          (SQL Server)
 # As senhas abaixo têm default para o projeto subir sem nenhum passo manual.
 # São APENAS de desenvolvimento — sobrescreva via variáveis de ambiente ou .env.
+name: pedidos
 
 x-sql-env: &sql-env
   MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Pedidos_Dev_2026!}
@@ -48,6 +52,36 @@ services:
         done
         echo ">> banco pronto"
     restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Projeto.Api/Dockerfile
+    container_name: pedidos-api
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      ConnectionStrings__PedidosDb: "Server=db,1433;Database=PedidosDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-Pedidos_Dev_2026!};TrustServerCertificate=True"
+    ports:
+      - "5000:8080"
+    healthcheck:
+      # A imagem aspnet não tem curl; usa o /dev/tcp do bash para chamar /health.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080 && printf \"GET /health HTTP/1.0\\r\\n\\r\\n\" >&3 && grep -q Healthy <&3'"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  web:
+    build:
+      context: ./frontend
+    container_name: pedidos-web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "3000:80"
 
 volumes:
   sqldata:

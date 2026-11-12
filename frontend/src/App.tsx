@@ -1,3 +1,5 @@
+import { PedidosPage } from './pages/PedidosPage'
+
 export default function App() {
-  return <h1>Gestão de Pedidos</h1>
+  return <PedidosPage />
 }

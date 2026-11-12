@@ -1,0 +1,53 @@
+# Stack completa: `docker compose up --build`
+# As senhas abaixo têm default para o projeto subir sem nenhum passo manual.
+# São APENAS de desenvolvimento — sobrescreva via variáveis de ambiente ou .env.
+
+x-sql-env: &sql-env
+  MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-Pedidos_Dev_2026!}
+  MCP_DB_PASSWORD: ${MCP_DB_PASSWORD:-Mcp_Leitura_2026!}
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: pedidos-db
+    environment:
+      <<: *sql-env
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q \"SELECT 1\" -o /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # Executa database/init/*.sql em ordem (schema → seed → login do MCP) e termina.
+  # Os scripts são idempotentes: rodar de novo não duplica nada.
+  db-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: pedidos-db-init
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      <<: *sql-env
+    volumes:
+      - ./database/init:/scripts:ro
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        for f in /scripts/*.sql; do
+          echo ">> executando $$f"
+          /opt/mssql-tools18/bin/sqlcmd -S db -U sa -P "$$MSSQL_SA_PASSWORD" -C -b -I \
+            -v McpPassword="$$MCP_DB_PASSWORD" -i "$$f"
+        done
+        echo ">> banco pronto"
+    restart: "no"
+
+volumes:
+  sqldata:

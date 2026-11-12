@@ -25,6 +25,7 @@ Regra de dependência (verificada nos `.csproj`):
 - **Domain** não conhece EF, HTTP nem DTOs. Invariantes ficam nas entidades e lançam `DomainException`.
 - **Application** define interfaces (`IPedidoRepository`, `IPedidoQueries`...) e a **Infrastructure** implementa.
 - **Controllers não têm regra de negócio**: recebem a request, chamam um service, devolvem o resultado.
+  Exceção: leituras puras sem validação nem regra (ex.: `ICatalogoQueries`) podem ser chamadas direto pelo controller — um service que só repassa a chamada é cerimônia.
 - Escrita usa repositórios + `IUnitOfWork`; leitura (listagens/relatórios) usa interfaces `*Queries` que projetam direto para DTO com `AsNoTracking`.
 
 ## Tratamento de erros (HTTP)
@@ -35,7 +36,7 @@ Erros viram `ProblemDetails` em `Api/Errors/GlobalExceptionHandler.cs`. **Não**
 |---|---|
 | `FluentValidation.ValidationException` | 400 |
 | `NaoEncontradoException` | 404 |
-| `DbUpdateConcurrencyException` | 409 |
+| `ConflitoConcorrenciaException` (a Infrastructure converte `DbUpdateConcurrencyException`) | 409 |
 | `DomainException`, `RegraNegocioException` | 422 |
 
 ## Nomenclatura

@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Projeto.Application.Pedidos;
+using Projeto.Application.Relatorios;
 
 namespace Projeto.Application;
 
@@ -12,6 +13,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
 
         services.AddScoped<IPedidoService, PedidoService>();
+        services.AddScoped<IRelatorioService, RelatorioService>();
 
         return services;
     }

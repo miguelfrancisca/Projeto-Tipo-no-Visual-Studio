@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "sqlserver-pedidos": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "mssql-mcp@3.0.0"],
+      "env": {
+        "DB_SERVER": "localhost",
+        "DB_PORT": "1433",
+        "DB_DATABASE": "PedidosDb",
+        "DB_USER": "claude_mcp",
+        "DB_PASSWORD": "${MCP_DB_PASSWORD:-Mcp_Leitura_2026!}",
+        "DB_ENCRYPT": "true",
+        "DB_TRUST_SERVER_CERTIFICATE": "true",
+        "DB_REQUEST_TIMEOUT": "60000"
+      }
+    }
+  }
+}

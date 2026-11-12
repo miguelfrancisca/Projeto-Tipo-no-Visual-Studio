@@ -1,4 +1,7 @@
 using System.Reflection;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using Projeto.Api.Binding;
 using Projeto.Api.Errors;
 using Projeto.Application;
 using Projeto.Infrastructure;
@@ -13,7 +16,24 @@ builder.Services
     .AddApplication()
     .AddInfrastructure(connectionString);
 
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers(options =>
+        // RN14: DateTimeOffset na URL só com offset explícito (nunca o fuso do servidor).
+        options.ModelBinderProviders.Insert(0, new DateTimeOffsetComOffsetModelBinderProvider()))
+    .ConfigureApiBehaviorOptions(options =>
+        // Erros de binding (formato da URL/JSON) no mesmo formato e idioma dos erros de validação.
+        options.InvalidModelStateResponseFactory = context =>
+            new BadRequestObjectResult(new ValidationProblemDetails(
+                context.ModelState
+                    .Where(e => e.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        e => JsonNamingPolicy.CamelCase.ConvertName(e.Key), // "Inicio" → "inicio", como no GlobalExceptionHandler
+                        e => e.Value!.Errors.Select(erro => erro.ErrorMessage).ToArray()))
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Requisição inválida",
+                Detail = "Um ou mais campos são inválidos.",
+            }));
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("sqlserver");

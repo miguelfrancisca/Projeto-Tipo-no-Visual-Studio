@@ -532,8 +532,8 @@ implementados diretamente.
 - Senhas padrão só de desenvolvimento; sem deploy online.
 - **CI (GitHub Actions):** criada em `.github/workflows/ci.yml` (commit `5577936`) e validada localmente com
   o `actionlint`. Primeira execução no GitHub (run `43460540401`, commit `cb97bb4`): Backend, Frontend e
-  Playwright com sucesso. O gatilho automático foi restrito à `main` no commit local `9026d02`,
-  ainda aguardando publicação.
+  Playwright com sucesso. O gatilho automático foi restrito à `main` no commit `9026d02`; após a
+  publicação, a execução seguinte (run `43468527578`, commit `f814221`) também passou nos três jobs.
 
 ---
 

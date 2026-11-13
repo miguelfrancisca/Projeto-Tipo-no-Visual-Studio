@@ -277,7 +277,7 @@ Os números reais vão para o README.
 | 22 | `feat(docker): containerize frontend with nginx` | `bdb69f0` | 🔧 | Mesmo commit da etapa 18 |
 | 23 | `fix(db): correct and optimize 2026 customer ranking query` | `e117b45` | ✅ | Investigação via MCP; resultado no README (`ff7a6d1`) (D7, D13) |
 | 24 | `test(e2e): add Playwright test for create-and-list pedido flow` | `f1db7c2`, `039dbf1`, `7eeca47` | 🔧 | Ampliado de 1 fluxo para 10 testes (D8), mais 3 por fuso (D9); instabilidade corrigida (D12) |
-| 25 | `ci: add GitHub Actions workflow` | `5577936` | ✅ | Três jobs, como previsto; o frontend também roda lint e Vitest e o backend inclui `Infrastructure.Tests` (D10). Primeira execução no GitHub (run `43460540401`, commit `cb97bb4`): Backend, Frontend e Playwright com sucesso. Ajuste do gatilho automático para somente `main`: commit local `9026d02`, aguardando publicação |
+| 25 | `ci: add GitHub Actions workflow` | `5577936` | ✅ | Três jobs, como previsto; o frontend também roda lint e Vitest e o backend inclui `Infrastructure.Tests` (D10). Primeira execução no GitHub (run `43460540401`, commit `cb97bb4`): Backend, Frontend e Playwright com sucesso. Gatilho automático restrito à `main` em `9026d02`; após a publicação (run `43468527578`, commit `f814221`), os três jobs passaram novamente |
 | 26 | `docs: add implementation plan` | `bdc1c28` | ✅ | Atualizado depois com o estado da CI e do contrato 400. Os textos da autora na seção 6 estão pendentes |
 | 27 | `docs: add README` | `ff7a6d1`, `0d6b0dc`, `cb97bb4` | ✅ | Parte 4 primeiro (D13), restante em `0d6b0dc`. As seções de avaliação pessoal e vídeo são da autora e estão pendentes |
 
@@ -338,9 +338,9 @@ Os números reais vão para o README.
 - **Histórico de dois arquivos pequenos:** só aparecem como renomeados com `git log --follow -M30%`
   (`IPedidoRepository.cs` 44%, `MiniGestaoPedidos.Infrastructure.csproj` 47%).
 - **404 e 415:** mantêm o formato padrão do ASP.NET, por decisão da Francisca 🅕.
-- **Resolvidos:** CI (etapa 25), README (etapa 27) e branch principal: publicada como `main`.
+- **Resolvidos:** CI (etapa 25), README (etapa 27), branch principal publicada como `main` e publicação de
+  `9026d02` e `2d07a53` (push até `f814221`; CI `43468527578` com sucesso nos três jobs).
 - **Pendentes:**
-  - publicação dos commits locais `9026d02` (gatilho da CI só em `main`) e `2d07a53` (CLAUDE.md);
   - `.mcp.json` com `cmd /c npx`, que só funciona no Windows (P2 no README);
   - `npm audit` com vulnerabilidades em dependências de desenvolvimento (ver README §11);
   - textos da autora (seção 6 deste documento e as seções de avaliação pessoal e vídeo do README).
@@ -362,7 +362,7 @@ e ficam nos espaços marcados abaixo.
 | F8 | Renomeação: commit único, histórico preservado, sem alterar lógica, `ItemPedido.cs` fora dos commits; aceitou `--follow -M30%` para os dois arquivos pequenos | Sessão; `449529d` |
 | F9 | Recusou encerrar processos à força quando as pastas estavam bloqueadas; fechou o Visual Studio | Sessão |
 | F10 | Exigiu aprovação manual para cada operação, sem troca de branch e sem push | Sessão (todas as etapas) |
-| F11 | Publicação: escolheu `main` como branch principal, renomeando a `master` local; autorizou o primeiro push só de `main`, sem `--force` e sem tags; consulta da CI somente leitura, pela API pública | Sessão; `origin/main` em `cb97bb4` |
+| F11 | Publicação: escolheu `main` como branch principal, renomeando a `master` local; autorizou o primeiro push só de `main`, sem `--force` e sem tags; depois, o segundo push (`cb97bb4..f814221`), também sem `--force`; consulta da CI somente leitura, pela API pública | Sessão; `origin/main` em `cb97bb4` e depois em `f814221` |
 
 ### Por que (texto da Francisca)
 

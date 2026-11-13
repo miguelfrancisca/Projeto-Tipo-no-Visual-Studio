@@ -1,0 +1,180 @@
+name: CI
+
+# A7 (temporário): master e main até à decisão sobre a branch principal;
+# depois, manter só a branch definitiva.
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  backend:
+    name: Backend (.NET 8 — build, unitários e integração)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET (versão fixada no global.json)
+        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        with:
+          global-json-file: global.json
+
+      - name: Cache NuGet
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore MiniGestaoPedidos.sln
+
+      - name: Build (warnings são erros)
+        run: dotnet build MiniGestaoPedidos.sln -c Release --no-restore
+
+      - name: Testes unitários — Domain
+        run: dotnet test tests/MiniGestaoPedidos.Domain.Tests -c Release --no-build --logger "trx;LogFileName=Domain.trx" --results-directory TestResults
+
+      - name: Testes unitários — Application
+        run: dotnet test tests/MiniGestaoPedidos.Application.Tests -c Release --no-build --logger "trx;LogFileName=Application.trx" --results-directory TestResults
+
+      - name: Testes unitários — Infrastructure
+        run: dotnet test tests/MiniGestaoPedidos.Infrastructure.Tests -c Release --no-build --logger "trx;LogFileName=Infrastructure.trx" --results-directory TestResults
+
+      # SQL Server real e descartável via Testcontainers (Docker do runner).
+      - name: Testes de integração — API + SQL Server 2022
+        run: dotnet test tests/MiniGestaoPedidos.Api.IntegrationTests -c Release --no-build --logger "trx;LogFileName=IntegrationTests.trx" --results-directory TestResults
+
+      - name: Publicar resultados (.trx)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: backend-test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
+          retention-days: 7
+
+  frontend:
+    name: Frontend (tipos, lint, Vitest e build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node 22 (cache npm)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Type-check
+        run: npx tsc -b
+
+      - name: Lint
+        run: npm run lint
+
+      # A4: o vite.config.ts usa pool "forks"; cada teste troca process.env.TZ
+      # no próprio processo. Nada aqui altera esse comportamento.
+      - name: Testes unitários (Vitest)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: E2E (Playwright contra a stack do Docker Compose)
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # A9: usa os valores de desenvolvimento do próprio compose; sem secrets.
+      # Sem o override de CA: o runner não tem inspeção TLS.
+      - name: Subir a stack (db → db-init → api → web)
+        run: docker compose up -d --build
+
+      # A3: sem "up --wait"; o /health via web prova nginx → API → SQL Server.
+      - name: Aguardar /health (até 5 min)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/health | grep -q Healthy; then
+              echo "Stack saudável (tentativa $i)."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::A stack não ficou saudável em 5 minutos."
+          docker compose ps -a
+          exit 1
+
+      - name: Setup Node 22 (cache npm)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        working-directory: frontend
+        run: npm ci
+
+      - name: Instalar Chromium do Playwright
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      # A2: --retries=0 anula o "retries: 1" que o playwright.config aplica com CI=true;
+      # --fail-on-flaky-tests protege contra retries reintroduzidos no futuro.
+      - name: Testes E2E
+        working-directory: frontend
+        run: npx playwright test --retries=0 --fail-on-flaky-tests
+
+      - name: Logs da stack (em caso de falha)
+        if: failure()
+        run: docker compose logs --no-color --timestamps
+
+      - name: Publicar relatório do Playwright (em caso de falha)
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Derrubar a stack
+        if: always()
+        run: docker compose down -v

@@ -55,6 +55,7 @@ Erros viram `ProblemDetails` em `Api/Errors/GlobalExceptionHandler.cs`. **Não**
 dotnet build                                            # build (warnings são erros)
 dotnet test tests/MiniGestaoPedidos.Domain.Tests                  # unitários – domínio
 dotnet test tests/MiniGestaoPedidos.Application.Tests             # unitários – application
+dotnet test tests/MiniGestaoPedidos.Infrastructure.Tests          # unitários – infrastructure (conversores EF, sem Docker)
 dotnet test tests/MiniGestaoPedidos.Api.IntegrationTests          # integração (precisa do Docker: Testcontainers)
 dotnet test                                             # tudo
 
@@ -62,7 +63,9 @@ docker compose up --build                               # stack completa: web :3
 docker compose down -v                                  # derruba e apaga o volume do banco
 
 cd frontend && npm run dev                              # frontend em dev (proxy /api → localhost:5000)
-cd frontend && npx tsc --noEmit                         # type-check
+cd frontend && npx tsc -b                               # type-check (o tsconfig.json raiz só tem referências)
+cd frontend && npm run lint                             # ESLint
+cd frontend && npm test                                 # unitários – frontend (Vitest)
 cd frontend && npx playwright test                      # E2E (stack do compose rodando)
 ```
 
@@ -70,7 +73,7 @@ cd frontend && npx playwright test                      # E2E (stack do compose 
 
 - Siga TDD para regras de negócio: escreva/ajuste o teste unitário antes da implementação.
 - Para criar um endpoint novo, use a skill `/novo-endpoint`.
-- O hook `PostToolUse` roda `dotnet build` após editar `.cs`/`.csproj` e `tsc` após editar `.ts`/`.tsx`. Se ele falhar, **corrija o erro antes de seguir**.
+- O hook `PostToolUse` roda `dotnet build` após editar `.cs`/`.csproj` e `tsc -b` (em `frontend/`) após editar `.ts`/`.tsx`. Se ele falhar, **corrija o erro antes de seguir**.
 - Use o MCP do SQL Server (`.mcp.json`) para inspecionar schema/dados e planos de execução em vez de supor.
 - Não use FluentAssertions (licença comercial a partir da v8): use `Assert` do xUnit.
 - Não adicione pacotes NuGet sem registrar a versão em `Directory.Packages.props`.

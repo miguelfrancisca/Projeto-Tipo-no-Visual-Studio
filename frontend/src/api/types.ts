@@ -1,4 +1,4 @@
-// Tipos espelhando os DTOs da API (src/Projeto.Application). Datas chegam como ISO 8601 UTC.
+// Tipos espelhando os DTOs da API (src/MiniGestaoPedidos.Application). Datas chegam como ISO 8601 UTC.
 
 export interface Cliente {
   id: number

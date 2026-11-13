@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Testes unitários da Infrastructure (sem Docker). Pacotes de teste comuns vêm do Directory.Build.props. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MiniGestaoPedidos.Infrastructure\MiniGestaoPedidos.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

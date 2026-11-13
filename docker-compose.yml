@@ -56,7 +56,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: src/Projeto.Api/Dockerfile
+      dockerfile: src/MiniGestaoPedidos.Api/Dockerfile
     container_name: pedidos-api
     depends_on:
       db-init:

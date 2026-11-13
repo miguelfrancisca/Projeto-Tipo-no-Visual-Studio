@@ -27,7 +27,7 @@ Atualize `docs/spec.md`:
 
 ## 2. Application (contratos + caso de uso)
 
-Em `src/Projeto.Application/<Feature>/`:
+Em `src/MiniGestaoPedidos.Application/<Feature>/`:
 - `<Acao>Request.cs` / `<Algo>Response.cs` como `record` (ou `<Algo>Query.cs` para filtros de leitura);
 - `<Acao>RequestValidator.cs` (FluentValidation) — tudo que é **formato** (obrigatório, faixas, paginação) → 400;
 - interface `I<Feature>Service` + `<Feature>Service` com o caso de uso. Regras que dependem de dados (existência, estoque) lançam `RegraNegocioException` (422) ou `NaoEncontradoException` (404);
@@ -38,13 +38,13 @@ Invariantes da entidade (ex.: quantidade > 0) ficam **no Domain**, lançando `Do
 
 ## 3. Testes unitários (antes de implementar a Infrastructure)
 
-Em `tests/Projeto.Application.Tests/<Feature>/` (e `tests/Projeto.Domain.Tests/` se mexeu em entidade):
+Em `tests/MiniGestaoPedidos.Application.Tests/<Feature>/` (e `tests/MiniGestaoPedidos.Domain.Tests/` se mexeu em entidade):
 - um teste por regra/caminho de erro + o caminho feliz;
 - validator: um teste por regra;
 - mocks com **NSubstitute**, asserções com **`Assert` do xUnit**;
 - nome: `Metodo_Cenario_ResultadoEsperado`.
 
-Rode `dotnet test tests/Projeto.Application.Tests` e confirme que passam.
+Rode `dotnet test tests/MiniGestaoPedidos.Application.Tests` e confirme que passam.
 
 ## 4. Infrastructure
 
@@ -56,7 +56,7 @@ Rode `dotnet test tests/Projeto.Application.Tests` e confirme que passam.
 
 ## 5. Controller
 
-Em `src/Projeto.Api/Controllers/<Feature>Controller.cs`:
+Em `src/MiniGestaoPedidos.Api/Controllers/<Feature>Controller.cs`:
 - `[ApiController]`, `[Route("<rota>")]`, ação `async` com `CancellationToken`;
 - **sem regra de negócio e sem try/catch** — erros são tratados pelo `GlobalExceptionHandler`;
 - `[ProducesResponseType]` para cada status documentado na spec;
@@ -64,11 +64,11 @@ Em `src/Projeto.Api/Controllers/<Feature>Controller.cs`:
 
 ## 6. Teste de integração
 
-Em `tests/Projeto.Api.IntegrationTests/<Feature>EndpointsTests.cs`, usando a fixture existente (Testcontainers SQL Server):
+Em `tests/MiniGestaoPedidos.Api.IntegrationTests/<Feature>EndpointsTests.cs`, usando a fixture existente (Testcontainers SQL Server):
 - um teste por critério de aceite (`CAxx`) do endpoint;
 - valide status HTTP, corpo **e** o estado do banco quando houver escrita.
 
-Rode `dotnet test tests/Projeto.Api.IntegrationTests` (Docker precisa estar rodando).
+Rode `dotnet test tests/MiniGestaoPedidos.Api.IntegrationTests` (Docker precisa estar rodando).
 
 ## 7. Frontend (se o endpoint for consumido pela UI)
 

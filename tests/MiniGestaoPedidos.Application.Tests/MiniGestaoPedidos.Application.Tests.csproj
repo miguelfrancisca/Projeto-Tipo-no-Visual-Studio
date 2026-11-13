@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pacotes de teste (xUnit, Test SDK, coverlet) vêm do Directory.Build.props. -->
+
+  <ItemGroup>
+    <PackageReference Include="NSubstitute" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MiniGestaoPedidos.Application\MiniGestaoPedidos.Application.csproj" />
+    <ProjectReference Include="..\..\src\MiniGestaoPedidos.Domain\MiniGestaoPedidos.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

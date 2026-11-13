@@ -11,10 +11,10 @@ Convenções do projeto para o Claude Code (e para humanos). Leia antes de alter
 ## Arquitetura (Clean Architecture)
 
 ```
-src/Projeto.Domain          Entidades e regras invariantes. Zero dependências.
-src/Projeto.Application     Casos de uso (Services), DTOs, validadores, interfaces de repositório/queries.
-src/Projeto.Infrastructure  EF Core (AppDbContext, mapeamentos), repositórios, queries de leitura.
-src/Projeto.Api             Controllers finos, Program.cs, tratamento global de erros.
+src/MiniGestaoPedidos.Domain          Entidades e regras invariantes. Zero dependências.
+src/MiniGestaoPedidos.Application     Casos de uso (Services), DTOs, validadores, interfaces de repositório/queries.
+src/MiniGestaoPedidos.Infrastructure  EF Core (AppDbContext, mapeamentos), repositórios, queries de leitura.
+src/MiniGestaoPedidos.Api             Controllers finos, Program.cs, tratamento global de erros.
 frontend/                   React + Vite + TypeScript.
 database/                   Scripts SQL (schema, seed, query da Parte 4).
 ```
@@ -53,9 +53,9 @@ Erros viram `ProblemDetails` em `Api/Errors/GlobalExceptionHandler.cs`. **Não**
 
 ```bash
 dotnet build                                            # build (warnings são erros)
-dotnet test tests/Projeto.Domain.Tests                  # unitários – domínio
-dotnet test tests/Projeto.Application.Tests             # unitários – application
-dotnet test tests/Projeto.Api.IntegrationTests          # integração (precisa do Docker: Testcontainers)
+dotnet test tests/MiniGestaoPedidos.Domain.Tests                  # unitários – domínio
+dotnet test tests/MiniGestaoPedidos.Application.Tests             # unitários – application
+dotnet test tests/MiniGestaoPedidos.Api.IntegrationTests          # integração (precisa do Docker: Testcontainers)
 dotnet test                                             # tudo
 
 docker compose up --build                               # stack completa: web :3000, api :5000, sql :1433

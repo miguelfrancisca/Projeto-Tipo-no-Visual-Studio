@@ -15,8 +15,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3000',
-    // A API filtra por dia em UTC e a tela exibe no fuso do navegador. Fixar UTC torna as
-    // asserções de data independentes do fuso da máquina (local ou CI). Ver README.
+    // Fuso padrão fixo para as asserções não dependerem da máquina (local ou CI).
+    // O comportamento em outros fusos é testado explicitamente em e2e/fuso-horario.spec.ts.
     timezoneId: 'UTC',
     locale: 'pt-BR',
     trace: 'retain-on-failure',

@@ -50,8 +50,8 @@ export interface Pagina<T> {
 
 export interface FiltroPedidos {
   clienteId?: number
-  dataInicio?: string // yyyy-MM-dd
-  dataFim?: string // yyyy-MM-dd
+  dataInicio?: string // yyyy-MM-dd, dia LOCAL do navegador (vira `inicio` com offset no client)
+  dataFim?: string // yyyy-MM-dd, dia LOCAL, inclusivo (vira `fim` exclusivo no client)
   pagina: number
   tamanhoPagina: number
 }

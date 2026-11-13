@@ -1,3 +1,4 @@
+import { inicioDoDiaLocal, inicioDoDiaSeguinteLocal } from '../datas'
 import type { Cliente, CriarPedidoRequest, FiltroPedidos, Pagina, Pedido, PedidoResumo, ProblemDetails, Produto } from './types'
 
 const BASE = '/api'
@@ -42,8 +43,10 @@ async function request<T>(caminho: string, init?: RequestInit): Promise<T> {
 function queryString(filtro: FiltroPedidos): string {
   const params = new URLSearchParams()
   if (filtro.clienteId) params.set('clienteId', String(filtro.clienteId))
-  if (filtro.dataInicio) params.set('dataInicio', filtro.dataInicio)
-  if (filtro.dataFim) params.set('dataFim', filtro.dataFim)
+  // RN14: os dias escolhidos viram instantes no fuso do navegador, com offset explícito
+  // (fim exclusivo = meia-noite local do dia seguinte). URLSearchParams codifica '+' como %2B.
+  if (filtro.dataInicio) params.set('inicio', inicioDoDiaLocal(filtro.dataInicio))
+  if (filtro.dataFim) params.set('fim', inicioDoDiaSeguinteLocal(filtro.dataFim))
   params.set('pagina', String(filtro.pagina))
   params.set('tamanhoPagina', String(filtro.tamanhoPagina))
   return params.toString()

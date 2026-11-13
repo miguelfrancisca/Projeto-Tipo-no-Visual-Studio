@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
@@ -14,5 +15,11 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
+  },
+  test: {
+    include: ['src/**/*.test.ts'],
+    // Os testes de datas trocam process.env.TZ; em "forks" isso vale para o processo real
+    // (em worker threads o env é uma cópia e a troca de fuso não teria efeito).
+    pool: 'forks',
   },
 })

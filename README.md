@@ -473,7 +473,8 @@ Detalhes e evidências em [`docs/plan.md`](docs/plan.md).
 - Um `docker inspect` leu o container antigo em vez da imagem nova.
 - Uma contagem de CRLF com `grep` estava errada: o arquivo utilizava LF, e não CRLF. A interpretação
   incorreta levou a uma conclusão equivocada sobre as terminações de linha.
-- O `CLAUDE.md` documenta um comando de verificação de tipos que não realiza a verificação esperada (P1).
+- O `CLAUDE.md` documentava um comando de verificação de tipos que não realizava a verificação esperada (P1,
+  corrigido em `2d07a53`).
 - O número de vulnerabilidades do npm foi informado desatualizado (7) antes de ser conferido (12).
 - O comando de erro do passo 8 (`$_.ErrorDetails.Message`) estava errado na proposta do README: no
   PowerShell 5.1 a mensagem veio vazia. Só foi corrigido (para `curl.exe -s -i`) depois de executado na
@@ -517,9 +518,9 @@ implementados diretamente.
   (ex.: `GET /pedidos/{id}`) vem do `GlobalExceptionHandler`, com título e detalhe em português.
   Validação após a correção: .NET **145/145** (incluindo 15 testes novos de contrato), Vitest **11/11** e
   Playwright E2E **39/39** execuções (13 testes × 3, sem retries), contra a imagem reconstruída da API.
-- **P1 — `CLAUDE.md`:** documenta `npx tsc --noEmit`, que, com a configuração atual de referências do
-  TypeScript, não realiza a verificação esperada. O comando correto é `npx tsc -b`. A documentação também
-  não lista todas as suítes de testes, incluindo `Infrastructure.Tests` e Vitest. Não corrigido nesta etapa.
+- **P1 — `CLAUDE.md` — corrigido** (commit `2d07a53`). Documentava `npx tsc --noEmit`, que, com a
+  configuração de referências do TypeScript, não realiza a verificação esperada; passou a `npx tsc -b`, o
+  mesmo comando do hook e da CI. A lista de comandos agora inclui `Infrastructure.Tests`, Vitest e lint.
 - **P2 — `.mcp.json`:** usa `cmd /c npx`, que **só funciona no Windows**. Não alterado.
 - **`npm audit`:** **7 vulnerabilidades moderadas**, todas em dependências de desenvolvimento e todas com
   a mesma origem: `minimatch` (negação de serviço), trazido pelo `typescript-eslint` (o pacote e os seus 5
@@ -530,7 +531,9 @@ implementados diretamente.
   (commit `e8f02a6`; avisos do `tinypool` e do `@vitest/mocker`).
 - Senhas padrão só de desenvolvimento; sem deploy online.
 - **CI (GitHub Actions):** criada em `.github/workflows/ci.yml` (commit `5577936`) e validada localmente com
-  o `actionlint`, mas **ainda não executada no GitHub**, porque não houve push.
+  o `actionlint`. Primeira execução no GitHub (run `43460540401`, commit `cb97bb4`): Backend, Frontend e
+  Playwright com sucesso. O gatilho automático foi restrito à `main` no commit local `9026d02`,
+  ainda aguardando publicação.
 
 ---
 

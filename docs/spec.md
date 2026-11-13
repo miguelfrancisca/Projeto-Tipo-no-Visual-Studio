@@ -110,6 +110,33 @@ Todas as respostas de erro seguem **RFC 7807 (`application/problem+json`)**.
 | 409 | Conflito de concorrência no estoque (RN10) — o cliente pode tentar de novo. |
 | 422 | Regra de negócio violada com request bem formada (cliente/produto inexistente, estoque insuficiente). |
 
+#### Formato do 400
+
+Todo 400 tem o **mesmo formato**, qualquer que seja a origem do erro: validação (FluentValidation), JSON malformado ou com tipo errado, corpo vazio, ou parâmetro de query/rota que não pode ser convertido.
+
+```http
+HTTP/1.1 400 Bad Request
+Content-Type: application/problem+json
+```
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Requisição inválida",
+  "status": 400,
+  "detail": "Um ou mais campos são inválidos.",
+  "errors": { "itens[0].quantidade": ["A quantidade deve ser maior que zero."] },
+  "traceId": "00-…-…-00"
+}
+```
+
+- **Chaves de `errors`:** o caminho do campo como aparece no JSON ou na query, em camelCase, segmento a segmento (`clienteId`, `itens[0].quantidade`, `inicio`, `periodo`). Erros sobre o corpo inteiro (vazio, `null` ou JSON sintaticamente inválido) usam a chave `corpo`.
+- **Erros de binding** (conversão de query, rota ou corpo) seguem a mesma regra: a chave é sempre o nome público do campo em camelCase, nunca o nome de um parâmetro ou de uma propriedade interna do ASP.NET/C#.
+- **Mensagens:** em português.
+- **Nada interno é exposto:** nenhuma chave com o nome de um parâmetro C# (ex.: `request`), vazia ou começada por `$`, e nenhuma mensagem com nomes de tipos .NET, `LineNumber` ou `BytePositionInLine`.
+- **`traceId`:** identifica a requisição nos logs do servidor.
+
+Os outros status mantêm o formato atual e **não** fazem parte deste contrato. Isso inclui o 404 de rota inexistente e o 415 (Content-Type não suportado), que são gerados pelo próprio ASP.NET.
+
 ### 5.1 `POST /pedidos` — cria um pedido
 
 Request:
@@ -224,6 +251,9 @@ Entregar em `database/` a versão corrigida e otimizada da query de ranking de c
 - **CA13** — `GET /relatorios/top-clientes` retorna no máximo 5 clientes, ordenados por valor total desc, considerando apenas pedidos do período.
 - **CA14** — Sem período completo (falta `dataInicio`/`dataFim`, ou falta `inicio`/`fim`) → 400.
 - **CA22** — `GET /relatorios/top-clientes` com `inicio`/`fim` considera o período no fuso informado (mesmo critério do CA18).
+
+### Erros
+- **CA23** — Todo 400 segue o formato da §5: `Content-Type: application/problem+json`, com `type`, `title`, `status`, `detail`, `errors` e `traceId`, chaves em camelCase, mensagens em português e nada interno exposto. Isso vale para: lista de itens vazia, `pagina=0`, JSON malformado, tipo errado num campo do corpo ou de um item, corpo vazio, corpo `null`, `clienteId=abc` na query, `inicio` sem offset e período misturado. Os formatos do 404 e do 415 não mudam.
 
 ### Frontend
 - **CA15** — Na tela de listagem consigo filtrar por cliente e período e navegar entre páginas.

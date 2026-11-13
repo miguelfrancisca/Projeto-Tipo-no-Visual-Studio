@@ -72,10 +72,13 @@ Sem inspeção TLS, use apenas `docker compose up --build`.
 | Domínio (`MiniGestaoPedidos.Domain.Tests`) | 17 | não | `dotnet test tests/MiniGestaoPedidos.Domain.Tests` |
 | Application (`MiniGestaoPedidos.Application.Tests`) | 56 | não | `dotnet test tests/MiniGestaoPedidos.Application.Tests` |
 | Infrastructure (`MiniGestaoPedidos.Infrastructure.Tests`) | 9 | não | `dotnet test tests/MiniGestaoPedidos.Infrastructure.Tests` |
-| Integração (`MiniGestaoPedidos.Api.IntegrationTests`) | 48 | **sim** (Testcontainers) | `dotnet test tests/MiniGestaoPedidos.Api.IntegrationTests` |
+| Integração (`MiniGestaoPedidos.Api.IntegrationTests`) | 63 | **sim** (Testcontainers) | `dotnet test tests/MiniGestaoPedidos.Api.IntegrationTests` |
 | Frontend — Vitest | 11 | não | `npm test` (em `frontend/`) |
 | E2E — Playwright | 13 | **sim** (stack do compose rodando) | `npx playwright test` (em `frontend/`) |
-| **Total** | **154** | | |
+| **Total** | **169** | | |
+
+O total conta cada teste **uma vez** (testes distintos). Execuções repetidas, como `--repeat-each=3` no
+Playwright, não entram nesse número.
 
 ### Passo 1 — Conferir os pré-requisitos (PowerShell)
 ```powershell
@@ -226,8 +229,11 @@ MiniGestaoPedidos.Api ──► Application ──► Domain
 | `GET /clientes`, `GET /produtos` | Listas de apoio ao frontend | 200 |
 | `GET /health` | Saúde da API e do banco | 200 |
 
-Erros de regra de negócio (404, 409, 422) seguem RFC 7807 (`application/problem+json`). Sobre o 400,
-ver o estado atual em **Limitações e pendências**.
+Erros de regra de negócio (404, 409, 422) seguem RFC 7807 (`application/problem+json`). O **400** tem um
+formato único para erros de validação e de binding, definido em `docs/spec.md` §5 (CA23):
+`application/problem+json` com `type`, `title`, `status`, `detail`, `errors` (chaves públicas em camelCase;
+`corpo` para erros do corpo inteiro) e `traceId`, com mensagens em português. O 404 de rota inexistente e o
+415 mantêm o formato gerado pelo próprio ASP.NET.
 
 ### Filtros de período (RN14)
 
@@ -444,7 +450,8 @@ Detalhes e evidências em [`docs/plan.md`](docs/plan.md).
   os testes por fuso foram criados depois para provar o problema e a correção; deu origem à RN14).
 - Conversor do EF com `ToUniversalTime()`, que dependeria do fuso do servidor (encontrado durante a
   implementação da RN14, ao procurar conversões dependentes do fuso do servidor).
-- Regressão do contrato HTTP 400 no commit `2d469ff` (**ainda pendente**, ver seção 11).
+- Regressão do contrato HTTP 400 no commit `2d469ff` (encontrada em revisão somente leitura; **corrigida no
+  commit `dc9643c`**, ver seção 11).
 
 ### Problemas de testes e ferramentas
 - Parte dos erros apontados pelo hook foi transitória: foram provocados pela ordem de edição (ex.: usar um
@@ -474,6 +481,13 @@ Detalhes e evidências em [`docs/plan.md`](docs/plan.md).
 - Falhas das próprias ferramentas de verificação: o Node não encontrou um caminho `/tmp` do Git Bash; o
   script PowerShell salvo sem BOM corrompeu os textos acentuados e não chegou a executar; uma verificação
   com `grep -P` era inválida; e um `git diff --no-index` com `<(...)` não funcionou no Windows.
+- Na correção do contrato 400, a proposta de acrescentar `application/problem+json` à resposta não teria
+  efeito: no cenário testado, o `ObjectResult` não preservava o Content-Type desejado devido ao
+  `[Produces("application/json")]` configurado nos controllers. Os testes do contrato, escritos antes da
+  correção, detectaram a falha; a resposta passou a ser um `JsonResult`.
+- Na mesma correção, uma linha errada (`AllowTrailingCommas = false`, sem relação com o pedido) foi escrita
+  no `Program.cs` e substituída pela linha aprovada (`AllowInputFormatterExceptionMessages = false`) antes de
+  qualquer execução de testes.
 
 ### Skill `novo-endpoint`
 A skill foi criada no commit `d0a9ba7`, **mas não foi utilizada nesta sessão**: os endpoints foram
@@ -487,26 +501,36 @@ implementados diretamente.
 
 ## 11. Limitações e pendências
 
-- **Contrato HTTP 400 — regressão pendente.** O commit `2d469ff` introduziu uma resposta própria para erros
-  de binding. Hoje:
-  - erros de **validação** (FluentValidation) saem como `application/problem+json`, com `type`, título e
-    mensagens em português;
-  - erros de **binding** (JSON malformado, tipo errado, valor de data sem offset) saem como
-    `application/json`, **sem `type` nem `traceId`**; os de JSON trazem mensagens em inglês que expõem
-    nomes de tipos .NET.
+- **Contrato HTTP 400 — corrigido** (commit `dc9643c`; `docs/spec.md` §5 e CA23). A regressão introduzida
+  no `2d469ff` foi corrigida. Os cenários cobrem erros de validação (FluentValidation) e de binding (JSON
+  malformado, tipo errado, corpo vazio ou `null`, parâmetro de query inválido, data sem offset). Os cenários
+  de HTTP 400 previstos no contrato e cobertos pelos testes seguem o mesmo formato:
+  - `Content-Type: application/problem+json`, com exatamente `type`, `title`, `status`, `detail`, `errors`
+    e `traceId`;
+  - chaves de `errors` com o nome público do campo em camelCase (`itens[0].quantidade`, `clienteId`,
+    `inicio`); erros sobre o corpo inteiro usam a chave `corpo`;
+  - mensagens em português. Nos cenários testados, as chaves e mensagens não expõem nomes de parâmetros C#,
+    nomes de tipos .NET ou posições do leitor de JSON.
 
-  A correção foi proposta (itens 3a–3f em `docs/plan.md`) e **aguarda revisão — não está corrigida**.
+  Os formatos do **404** e do **415** foram **preservados** (decisão da autora) e estão fixados por testes de
+  caracterização: o 404 de rota inexistente e o 415 vêm do próprio ASP.NET; o 404 de recurso inexistente
+  (ex.: `GET /pedidos/{id}`) vem do `GlobalExceptionHandler`, com título e detalhe em português.
+  Validação após a correção: .NET **145/145** (incluindo 15 testes novos de contrato), Vitest **11/11** e
+  Playwright E2E **39/39** execuções (13 testes × 3, sem retries), contra a imagem reconstruída da API.
 - **P1 — `CLAUDE.md`:** documenta `npx tsc --noEmit`, que, com a configuração atual de referências do
   TypeScript, não realiza a verificação esperada. O comando correto é `npx tsc -b`. A documentação também
   não lista todas as suítes de testes, incluindo `Infrastructure.Tests` e Vitest. Não corrigido nesta etapa.
 - **P2 — `.mcp.json`:** usa `cmd /c npx`, que **só funciona no Windows**. Não alterado.
-- **`npm audit`:** 12 vulnerabilidades (8 moderadas, 2 altas, 2 críticas), **todas em dependências de
-  desenvolvimento** (`vitest`/`tinypool`, `playwright`, `typescript-eslint`/`minimatch`);
-  `npm audit --omit=dev` → 0. Não afetam a imagem final do frontend, mas afetam a máquina de desenvolvimento
-  e a CI (o Playwright 1.52 baixa navegadores sem verificar o certificado SSL). Não corrigido.
-- **404 e 415** mantêm o formato padrão do ASP.NET (decisão da autora).
+- **`npm audit`:** **7 vulnerabilidades moderadas**, todas em dependências de desenvolvimento e todas com
+  a mesma origem: `minimatch` (negação de serviço), trazido pelo `typescript-eslint` (o pacote e os seus 5
+  subpacotes `@typescript-eslint/*`). `npm audit --omit=dev` → 0. Não afetam a imagem final do frontend.
+  Não corrigido. Os avisos anteriormente identificados para Playwright e Vitest deixaram de aparecer na
+  auditoria atual: Playwright atualizado para **1.55.1**
+  (commit `bde5a7c`; o 1.52 baixava navegadores sem verificar o certificado SSL) e Vitest para **4.1.12**
+  (commit `e8f02a6`; avisos do `tinypool` e do `@vitest/mocker`).
 - Senhas padrão só de desenvolvimento; sem deploy online.
-- **CI (GitHub Actions)** ainda não criada.
+- **CI (GitHub Actions):** criada em `.github/workflows/ci.yml` (commit `5577936`) e validada localmente com
+  o `actionlint`, mas **ainda não executada no GitHub**, porque não houve push.
 
 ---
 

@@ -17,16 +17,26 @@ const BORDA = {
 const tabelaLinhas = (page: Page) => page.getByRole('table', { name: 'Pedidos' }).locator('tbody tr')
 const paginacao = (page: Page) => page.getByRole('navigation', { name: 'Paginação' })
 
-/** Aplica o filtro de período e devolve a URL da requisição feita à API. */
+/**
+ * Aplica o filtro de período e devolve os parâmetros da requisição feita à API.
+ *
+ * Espera a RESPOSTA filtrada e o fim do carregamento da tabela antes de devolver. Antes, o teste
+ * esperava só o envio da requisição e o texto "Página 1 de" — que a listagem SEM filtro já
+ * exibia —, e com a API lenta (logo após subir a stack) lia as linhas antigas e falhava.
+ */
 async function filtrarPeriodo(page: Page, de: string, ate: string) {
   const form = page.getByRole('form', { name: 'Filtros de pedidos' })
   await form.getByLabel('De', { exact: true }).fill(de)
   await form.getByLabel('Até', { exact: true }).fill(ate)
-  const requisicao = page.waitForRequest((r) => r.url().includes('/api/pedidos?'))
+  const respostaFiltrada = page.waitForResponse(
+    (r) => r.url().includes('/api/pedidos?') && new URL(r.url()).searchParams.has('inicio'),
+  )
   await form.getByRole('button', { name: 'Filtrar' }).click()
-  const url = new URL((await requisicao).url())
-  await expect(paginacao(page)).toContainText('Página 1 de')
-  return url.searchParams
+  const resposta = await respostaFiltrada
+  expect(resposta.status()).toBe(200)
+  // aria-busy fica "true" durante a busca (PedidosPage) e volta a "false" com os dados novos já renderizados.
+  await expect(page.locator('section[aria-busy="false"]')).toBeVisible()
+  return new URL(resposta.url()).searchParams
 }
 
 /** Percorre todas as páginas e devolve [número do pedido, texto da data] de cada linha. */

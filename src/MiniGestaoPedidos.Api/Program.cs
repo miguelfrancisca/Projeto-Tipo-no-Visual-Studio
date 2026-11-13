@@ -1,6 +1,4 @@
 using System.Reflection;
-using System.Text.Json;
-using Microsoft.AspNetCore.Mvc;
 using MiniGestaoPedidos.Api.Binding;
 using MiniGestaoPedidos.Api.Errors;
 using MiniGestaoPedidos.Application;
@@ -18,22 +16,16 @@ builder.Services
 
 builder.Services
     .AddControllers(options =>
+    {
         // RN14: DateTimeOffset na URL só com offset explícito (nunca o fuso do servidor).
-        options.ModelBinderProviders.Insert(0, new DateTimeOffsetComOffsetModelBinderProvider()))
+        options.ModelBinderProviders.Insert(0, new DateTimeOffsetComOffsetModelBinderProvider());
+        ErrosDeBinding.ConfigurarMensagens(options.ModelBindingMessageProvider);
+    })
+    // Não expõe nomes de tipos .NET nem posições do leitor nas mensagens de JSON inválido (spec §5).
+    .AddJsonOptions(options => options.AllowInputFormatterExceptionMessages = false)
     .ConfigureApiBehaviorOptions(options =>
-        // Erros de binding (formato da URL/JSON) no mesmo formato e idioma dos erros de validação.
-        options.InvalidModelStateResponseFactory = context =>
-            new BadRequestObjectResult(new ValidationProblemDetails(
-                context.ModelState
-                    .Where(e => e.Value?.Errors.Count > 0)
-                    .ToDictionary(
-                        e => JsonNamingPolicy.CamelCase.ConvertName(e.Key), // "Inicio" → "inicio", como no GlobalExceptionHandler
-                        e => e.Value!.Errors.Select(erro => erro.ErrorMessage).ToArray()))
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Title = "Requisição inválida",
-                Detail = "Um ou mais campos são inválidos.",
-            }));
+        // Erros de binding (JSON, corpo, query, rota) no contrato do 400 da spec §5.
+        options.InvalidModelStateResponseFactory = ErrosDeBinding.CriarResposta);
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>("sqlserver");

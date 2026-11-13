@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
@@ -15,11 +16,15 @@ internal sealed class GlobalExceptionHandler(
     IProblemDetailsService problemDetailsService,
     ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
+    /// <summary>Título e detalhe de todo 400 (spec §5), também usados por <see cref="ErrosDeBinding"/>.</summary>
+    internal const string TituloRequisicaoInvalida = "Requisição inválida";
+    internal const string DetalheRequisicaoInvalida = "Um ou mais campos são inválidos.";
+
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
         var problem = exception switch
         {
-            ValidationException ex => Validacao(ex),
+            ValidationException ex => Validacao(ex, httpContext),
             NaoEncontradoException ex => Problema(StatusCodes.Status404NotFound, "Recurso não encontrado", ex.Message),
             ConflitoConcorrenciaException ex => Problema(StatusCodes.Status409Conflict, "Conflito de concorrência", ex.Message),
             EstoqueInsuficienteException ex => EstoqueInsuficiente(ex),
@@ -43,15 +48,21 @@ internal sealed class GlobalExceptionHandler(
         });
     }
 
-    private static ValidationProblemDetails Validacao(ValidationException ex) =>
-        new(ex.Errors
+    private static ValidationProblemDetails Validacao(ValidationException ex, HttpContext httpContext)
+    {
+        var problem = new ValidationProblemDetails(ex.Errors
             .GroupBy(e => CamelCase(e.PropertyName))
             .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).Distinct().ToArray()))
         {
             Status = StatusCodes.Status400BadRequest,
-            Title = "Requisição inválida",
-            Detail = "Um ou mais campos são inválidos.",
+            Title = TituloRequisicaoInvalida,
+            Detail = DetalheRequisicaoInvalida,
         };
+
+        // Spec §5: todo 400 tem traceId. Só aqui (e não em CustomizeProblemDetails) para não mudar 404/409/422.
+        problem.Extensions["traceId"] = Activity.Current?.Id ?? httpContext.TraceIdentifier;
+        return problem;
+    }
 
     private static ProblemDetails EstoqueInsuficiente(EstoqueInsuficienteException ex)
     {
@@ -66,6 +77,6 @@ internal sealed class GlobalExceptionHandler(
         new() { Status = status, Title = titulo, Detail = detalhe };
 
     /// <summary>"Itens[0].Quantidade" → "itens[0].quantidade", alinhado ao JSON camelCase da API.</summary>
-    private static string CamelCase(string caminho) =>
+    internal static string CamelCase(string caminho) =>
         string.Join('.', caminho.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
 }

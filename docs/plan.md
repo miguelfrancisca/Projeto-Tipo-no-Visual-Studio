@@ -256,7 +256,7 @@ Os números reais vão para o README.
 | 1 | `chore: remove empty template project` | `9a78b5f` | ✅ | |
 | 2 | `chore: remove template sample files` | `3020d82` | ✅ | |
 | 3 | `build: pin .NET 8 SDK and centralize build settings` | `198bce0` | 🔧 | Acrescentado `Directory.Packages.props` (gestão central de pacotes) 🅒 |
-| 4 | `docs: add CLAUDE.md with project conventions` | `b1e0a92` | ✅ | Atualizado depois em `326b9e5`, `1a16411` e `449529d` |
+| 4 | `docs: add CLAUDE.md with project conventions` | `b1e0a92` | ✅ | Atualizado depois em `326b9e5`, `1a16411`, `449529d` e `2d07a53` |
 | 5 | `chore(claude): add post-edit build hook` | `0e9d22c`, `daf28b2` | 🔧 | O hook pedia "correções" quando a DLL estava em uso por `dotnet run`; passou a só avisar (D6) 🅣 |
 | 6 | `chore(claude): add novo-endpoint skill` | `d0a9ba7` | ✅ | |
 | 7 | `chore(claude): configure SQL Server MCP server` | `fd9de8f` | 🔧 | Executada **depois** das etapas 8–10 (o login do MCP precisa do banco); `mssql-mcp@3.0.0` (D2) e login somente leitura (D1) |
@@ -277,9 +277,9 @@ Os números reais vão para o README.
 | 22 | `feat(docker): containerize frontend with nginx` | `bdb69f0` | 🔧 | Mesmo commit da etapa 18 |
 | 23 | `fix(db): correct and optimize 2026 customer ranking query` | `e117b45` | ✅ | Investigação via MCP; resultado no README (`ff7a6d1`) (D7, D13) |
 | 24 | `test(e2e): add Playwright test for create-and-list pedido flow` | `f1db7c2`, `039dbf1`, `7eeca47` | 🔧 | Ampliado de 1 fluxo para 10 testes (D8), mais 3 por fuso (D9); instabilidade corrigida (D12) |
-| 25 | `ci: add GitHub Actions workflow` | — | ⏳ | |
-| 26 | `docs: add implementation plan` | (este documento) | 📝 | |
-| 27 | `docs: add README` | `ff7a6d1` (parcial) | 📝 | Apenas a seção da Parte 4 está escrita |
+| 25 | `ci: add GitHub Actions workflow` | `5577936` | ✅ | Três jobs, como previsto; o frontend também roda lint e Vitest e o backend inclui `Infrastructure.Tests` (D10). Primeira execução no GitHub (run `43460540401`, commit `cb97bb4`): Backend, Frontend e Playwright com sucesso. Ajuste do gatilho automático para somente `main`: commit local `9026d02`, aguardando publicação |
+| 26 | `docs: add implementation plan` | `bdc1c28` | ✅ | Atualizado depois com o estado da CI e do contrato 400. Os textos da autora na seção 6 estão pendentes |
+| 27 | `docs: add README` | `ff7a6d1`, `0d6b0dc`, `cb97bb4` | ✅ | Parte 4 primeiro (D13), restante em `0d6b0dc`. As seções de avaliação pessoal e vídeo são da autora e estão pendentes |
 
 **Commits fora das 27 etapas**
 
@@ -291,19 +291,21 @@ Os números reais vão para o README.
 | `7b424c2`, `a813f9e` | Testes do conversor UTC e do instante gravado (D10) |
 | `449529d` | Renomeação para `MiniGestaoPedidos` (D11) |
 | `7eeca47` | Correção da instabilidade do E2E (D12) |
+| `bde5a7c`, `e8f02a6` | Atualizações de segurança de dependências de desenvolvimento do frontend (`@playwright/test` 1.55.1, `vitest` 4.1.12) |
+| `e69c067`, `dc9643c` | Contrato HTTP 400: spec §5 e CA23; correção e testes (D14) |
 
 **Verificação do plano** (seção "Verificação" do texto aprovado)
 
 | # | Previsto | Situação |
 |---|---|---|
 | 1 | Build sem avisos | ✅ 0 avisos, 0 erros |
-| 2 | Testes unitários | ✅ Domínio 17, Application 56; mais Infrastructure 9 (não previsto) |
-| 3 | Integração com Testcontainers | ✅ 48 |
-| 4 | `down -v` e `up --build`; `:3000` e `:5000/swagger` | ✅ verificado nesta máquina com o override de CA (D3) |
+| 2 | Testes unitários | ✅ Domínio 17, Application 56; mais Infrastructure 9 e Vitest 11 (não previstos, D10) |
+| 3 | Integração com Testcontainers | ✅ 63 (48 + 15 do contrato HTTP 400, D14); também na CI do GitHub |
+| 4 | `down -v` e `up --build`; `:3000` e `:5000/swagger` | ✅ verificado nesta máquina com o override de CA (D3); na CI do GitHub, `up -d --build` sem o override, com `/health` saudável |
 | 5 | Fluxo manual de criar pedido e erro de estoque | ✅ |
-| 6 | Playwright | ✅ 13/13 em dois ciclos com a stack recriada do zero |
+| 6 | Playwright | ✅ 13/13 em dois ciclos com a stack recriada do zero; ✅ na CI do GitHub com `--retries=0 --fail-on-flaky-tests` |
 | 7 | Parte 4 antes e depois | ✅ (D7) |
-| 8 | "~27 commits" | 🔧 38 commits até a criação deste documento: etapas mais granulares e trabalho não previsto (D9–D12) |
+| 8 | "~27 commits" | 🔧 38 commits até a criação deste documento; 48 até `2d07a53`: etapas mais granulares e trabalho não previsto (D9–D14) |
 
 ## 4. Divergências e correções
 
@@ -322,12 +324,13 @@ Os números reais vão para o README.
 | D11 | Renomeação para `MiniGestaoPedidos` | 🅕 | Pedido da Francisca, em commit único preservando o histórico | `449529d` |
 | D12 | Instabilidade do E2E corrigida | 🅣 | O teste lia as linhas antes da resposta filtrada chegar | `7eeca47` |
 | D13 | A Parte 4 do README foi escrita antes do restante | 🅒 | Documentar a análise logo após realizá-la | `ff7a6d1` |
+| D14 | Contrato HTTP 400 unificado (não previsto): todo 400 em `application/problem+json`, com `type` e `traceId`, chaves em camelCase e mensagens em português, sem nada interno do .NET | 🅣 | Regressão do `2d469ff` encontrada em revisão somente leitura (itens 3a–3f, adiados em F7). A spec ganhou a §5 "Formato do 400" e o CA23 antes da correção. 404 e 415 continuam no formato padrão (F7) | `e69c067`, `dc9643c` |
 
 ## 5. Problemas conhecidos e pendências
 
-- **Contrato HTTP 400 (3a–3f):** o `2d469ff` fez as respostas 400 de binding perderem `type` e `traceId`, e elas
-  saem como `application/json` (a spec §5 pede `application/problem+json`). Os erros de JSON estão em inglês e
-  expõem nomes de tipos .NET. Correção proposta, **aguardando revisão** 🅕.
+- **Contrato HTTP 400 (3a–3f) — corrigido.** O `2d469ff` fez as respostas 400 de binding perderem `type` e
+  `traceId`, saindo como `application/json`, em inglês e com nomes de tipos .NET. Corrigido em `dc9643c`, com o
+  contrato definido antes na spec (`e69c067`, §5 e CA23) (D14).
 - **Commit intermediário `3a54eb7`:** a API aceitava `inicio`/`fim` sem offset (usando o fuso do servidor) até o
   `2d469ff`. O frontend ainda não usava esses parâmetros e o commit nunca foi publicado. Não é corrigível sem
   reescrever o histórico, o que é proibido. **Lição:** a validação da entrada entra junto com o contrato novo,
@@ -335,7 +338,12 @@ Os números reais vão para o README.
 - **Histórico de dois arquivos pequenos:** só aparecem como renomeados com `git log --follow -M30%`
   (`IPedidoRepository.cs` 44%, `MiniGestaoPedidos.Infrastructure.csproj` 47%).
 - **404 e 415:** mantêm o formato padrão do ASP.NET, por decisão da Francisca 🅕.
-- **Pendentes:** CI (etapa 25), README completo (etapa 27), decisão sobre a branch `main` antes da publicação.
+- **Resolvidos:** CI (etapa 25), README (etapa 27) e branch principal: publicada como `main`.
+- **Pendentes:**
+  - publicação dos commits locais `9026d02` (gatilho da CI só em `main`) e `2d07a53` (CLAUDE.md);
+  - `.mcp.json` com `cmd /c npx`, que só funciona no Windows (P2 no README);
+  - `npm audit` com vulnerabilidades em dependências de desenvolvimento (ver README §11);
+  - textos da autora (seção 6 deste documento e as seções de avaliação pessoal e vídeo do README).
 
 ## 6. Ajustes e discordâncias da Francisca
 
@@ -354,6 +362,7 @@ e ficam nos espaços marcados abaixo.
 | F8 | Renomeação: commit único, histórico preservado, sem alterar lógica, `ItemPedido.cs` fora dos commits; aceitou `--follow -M30%` para os dois arquivos pequenos | Sessão; `449529d` |
 | F9 | Recusou encerrar processos à força quando as pastas estavam bloqueadas; fechou o Visual Studio | Sessão |
 | F10 | Exigiu aprovação manual para cada operação, sem troca de branch e sem push | Sessão (todas as etapas) |
+| F11 | Publicação: escolheu `main` como branch principal, renomeando a `master` local; autorizou o primeiro push só de `main`, sem `--force` e sem tags; consulta da CI somente leitura, pela API pública | Sessão; `origin/main` em `cb97bb4` |
 
 ### Por que (texto da Francisca)
 
@@ -368,7 +377,7 @@ e ficam nos espaços marcados abaixo.
 1. **Spec primeiro:** `docs/spec.md` com regras, endpoints, modelo de dados e critérios de aceite, antes de qualquer código.
 2. **Plan mode:** exploração somente leitura, perguntas sobre decisões que cabiam à autora e plano aprovado antes da execução.
 3. **Execução em commits pequenos**, apoiada pela configuração do projeto:
-   - **hook** `PostToolUse`, que roda `dotnet build` / `tsc` após cada edição e devolve os erros ao Claude;
+   - **hook** `PostToolUse`, que roda `dotnet build` / `tsc -b` após cada edição e devolve os erros ao Claude;
    - **skill** `novo-endpoint`, a receita para criar endpoints seguindo o padrão do projeto;
    - **MCP** do SQL Server com login somente leitura, para inspecionar o banco e os planos de execução.
 4. **Revisões técnicas somente leitura** antes das mudanças sensíveis, com aprovação explícita da autora.
